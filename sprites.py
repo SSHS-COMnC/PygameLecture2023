@@ -1,4 +1,4 @@
-from typing import Self
+from typing import Any, Self
 import pygame, csv
 
 from constants import *
@@ -109,7 +109,7 @@ class Player(Soldier):
     player: Self
 
     def __init__(self, x, y) -> None:
-        super().__init__(x, y, image_bank["player/Idle/0", "", 1.65])
+        super().__init__(x, y, image_bank["player/Idle/0"])
         self.x_speed, self.y_speed = 0, 0
         self.health = 100
         self.in_air = True
@@ -146,11 +146,11 @@ class Player(Soldier):
             self.y -= dy
 
         # check if fallen off the map
-        if self.rect.bottom > SCREEN_HEIGHT:
+        if self.rect.bottom > BACK_SCREEN_HEIGHT:
             self.health = 0
 
         # check if going off the edges of the screen
-        if self.rect.left + dx < 0 or self.rect.right + dx > SCREEN_WIDTH:
+        if self.rect.left + dx < 0 or self.rect.right + dx > BACK_SCREEN_WIDTH:
             dx = 0
 
         # update rectangle position
@@ -165,11 +165,10 @@ class Player(Soldier):
             self.in_air = True
 
     def update(self) -> None:
-        if bullet := pygame.sprite.spritecollideany(self, Bullet.bullets, False):
+        if bullet := pygame.sprite.spritecollideany(self, Bullet.bullets):
             bullet: Bullet
             bullet.kill()
             self.health -= 5
-        return super().update()
 
 
 class Enemy(Soldier):
@@ -184,7 +183,7 @@ class Enemy(Soldier):
 
     def shoot(self):
         if self.shoot_cooldown == 0 and self.ammo > 0:
-            self.shoot_cooldown = 20
+            self.shoot_cooldown = 60
             Bullet(
                 self.rect.centerx + (0.75 * self.rect.size[0] * self.direction),
                 self.rect.centery,
@@ -192,6 +191,19 @@ class Enemy(Soldier):
             )
             # reduce ammo
             self.ammo -= 1
+
+    def update(self) -> None:
+        if self.shoot_cooldown > 0:
+            self.shoot_cooldown -= 1
+        to_player: pygame.Vector2 = pygame.Vector2(
+            Player.player.rect.center
+        ) - pygame.Vector2(self.rect.center)
+        if to_player.length() < 100:
+            if to_player.x < 0:
+                self.direction = -1
+            elif to_player.x > 0:
+                self.direction = 1
+            self.shoot()
 
 
 class ItemBox(PositionedSprite):
@@ -205,17 +217,18 @@ class Bullet(PositionedSprite):
 
     def __init__(self, x, y, direction) -> None:
         super().__init__(x, y, image_bank["icons/bullet"])
-        self.x_speed = 10 * direction
+        self.x_speed = 2 * direction
         self.direction = direction
         self.rect.center = (x, y)
         self.bullets.add(self)
+        Scene.current.add(self)
 
     def update(self):
         # move bullet
         self.x += self.x_speed
 
         # check if bullet has gone off screen
-        if self.rect.right < 0 or self.rect.left > SCREEN_WIDTH:
+        if self.rect.right < 0 or self.rect.left > BACK_SCREEN_WIDTH:
             self.kill()
 
         if pygame.sprite.spritecollideany(self, Tile.tiles):
@@ -228,3 +241,17 @@ class Camera:
 
     def move(self):
         self.rect.center = Player.player.rect.center
+
+    def get_rects(self):
+        r = min(self.rect.right, BACK_SCREEN_WIDTH)
+        b = min(self.rect.bottom, BACK_SCREEN_HEIGHT)
+        l = max(self.rect.left, 0)
+        t = max(self.rect.top, 0)
+        rect = pygame.Rect((l - self.rect.left, t - self.rect.top), (r - l, b - t))
+        rect1 = pygame.Rect(l, t, r - l, b - t)
+        return rect, rect1
+
+    def get_surface(self, backscreen: Surface, rect, rect1):
+        surface = Surface(self.rect.size).convert_alpha()
+        surface.blit(backscreen.subsurface(rect1), rect)
+        return surface

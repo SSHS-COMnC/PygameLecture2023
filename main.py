@@ -5,8 +5,8 @@ from sprites import *
 
 pygame.init()
 
-
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+backscreen = pygame.Surface((BACK_SCREEN_WIDTH, BACK_SCREEN_HEIGHT))
 pygame.display.set_caption("Shooter")
 
 # set framerate
@@ -58,6 +58,8 @@ restart_button = button.Button(
 
 Scene.current = Level(level)
 
+camera = Camera(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)
+
 run = True
 while run:
     clock.tick(FPS)
@@ -71,14 +73,13 @@ while run:
         if exit_button.draw(screen):
             run = False
     else:
+        camera.move()
+        rect, rect1 = camera.get_rects()
         # update background
-        screen.fill(BG)
+        backscreen.fill(BG, rect1)
         # draw world map
-        Scene.current.draw(screen)
-        # # show Player.player health
-        # health_bar.draw(Player.player.health)
-        # show ammo
-        draw_text("AMMO: ", font, WHITE, 10, 35)
+        Scene.current.draw(backscreen)
+        Scene.current.update()
 
         # update Player.player actions
         if Player.player.alive:
@@ -91,9 +92,13 @@ while run:
                 if level <= MAX_LEVELS:
                     Scene.current = Level(level)
         else:
-            if restart_button.draw(screen):
+            if restart_button.draw(backscreen):
                 Scene.current.reset()
 
+        screen.blit(
+            camera.get_surface(backscreen, rect, rect1),
+            pygame.Rect((0, 0), camera.rect.size),
+        )
     for event in pygame.event.get():
         # quit game
         if event.type == pygame.QUIT:
