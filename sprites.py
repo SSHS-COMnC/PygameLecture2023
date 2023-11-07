@@ -146,11 +146,11 @@ class Player(Soldier):
             self.y -= dy
 
         # check if fallen off the map
-        if self.rect.bottom > BACK_SCREEN_HEIGHT:
+        if self.rect.bottom > MAP_HEIGHT:
             self.health = 0
 
         # check if going off the edges of the screen
-        if self.rect.left + dx < 0 or self.rect.right + dx > BACK_SCREEN_WIDTH:
+        if self.rect.left + dx < 0 or self.rect.right + dx > MAP_WIDTH:
             dx = 0
 
         # update rectangle position
@@ -228,7 +228,7 @@ class Bullet(PositionedSprite):
         self.x += self.x_speed
 
         # check if bullet has gone off screen
-        if self.rect.right < 0 or self.rect.left > BACK_SCREEN_WIDTH:
+        if self.rect.right < 0 or self.rect.left > MAP_WIDTH:
             self.kill()
 
         if pygame.sprite.spritecollideany(self, Tile.tiles):
@@ -243,8 +243,8 @@ class Camera:
         self.rect.center = Player.player.rect.center
 
     def get_rects(self):
-        r = min(self.rect.right, BACK_SCREEN_WIDTH)
-        b = min(self.rect.bottom, BACK_SCREEN_HEIGHT)
+        r = min(self.rect.right, MAP_WIDTH)
+        b = min(self.rect.bottom, MAP_HEIGHT)
         l = max(self.rect.left, 0)
         t = max(self.rect.top, 0)
         rect = pygame.Rect((l - self.rect.left, t - self.rect.top), (r - l, b - t))

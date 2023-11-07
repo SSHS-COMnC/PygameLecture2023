@@ -6,7 +6,7 @@ from sprites import *
 pygame.init()
 
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-backscreen = pygame.Surface((BACK_SCREEN_WIDTH, BACK_SCREEN_HEIGHT))
+map_surface = pygame.Surface((MAP_WIDTH, MAP_HEIGHT))
 pygame.display.set_caption("Shooter")
 
 # set framerate
@@ -76,9 +76,9 @@ while run:
         camera.move()
         rect, rect1 = camera.get_rects()
         # update background
-        backscreen.fill(BG, rect1)
+        map_surface.fill(BG, rect1)
         # draw world map
-        Scene.current.draw(backscreen)
+        Scene.current.draw(map_surface)
         Scene.current.update()
 
         # update Player.player actions
@@ -92,11 +92,11 @@ while run:
                 if level <= MAX_LEVELS:
                     Scene.current = Level(level)
         else:
-            if restart_button.draw(backscreen):
+            if restart_button.draw(map_surface):
                 Scene.current.reset()
 
         screen.blit(
-            camera.get_surface(backscreen, rect, rect1),
+            camera.get_surface(map_surface, rect, rect1),
             pygame.Rect((0, 0), camera.rect.size),
         )
     for event in pygame.event.get():
