@@ -1,9 +1,9 @@
 import pygame, csv
+import pickle as pkl
 
 from constants import *
 from pygame import Surface
 from pygame.sprite import Sprite, Group
-import time
 
 
 class Scene(Group):
@@ -60,7 +60,9 @@ class Level(Scene):
                         self.add(ItemBox("Health", x, y))
                     elif tile == 20:  # create exit
                         self.add(Exit(x, y))
+                        
         pygame.time.set_timer(pygame.USEREVENT, 1000)
+        
         return player_position
 
     def reset(self):
@@ -68,8 +70,6 @@ class Level(Scene):
         self.add(Player(*self.player_position))
         for bullet in Bullet.bullets:
             bullet.kill()
-        Scene.game.counter = TIME_LIMIT
-        pygame.time.set_timer(pygame.USEREVENT, 1000)
 
 
 class PositionedSprite(Sprite):
@@ -93,7 +93,7 @@ class Tile(PositionedSprite):
 
 class Player(PositionedSprite):
     """A class that represents the player. It is a subclass of PositionedSprite."""
-
+    
     def __init__(self, x, y):
         super().__init__(x, y, Scene.game.player_img)
         self.x_speed, self.y_speed = 0, 0
@@ -220,7 +220,6 @@ class Exit(PositionedSprite):
     def __init__(self, x, y):
         super().__init__(x, y, Scene.game.tile_imgs[20])
         Exit.current = self
-        print(type(Exit.current))
 
 
 class Bullet(PositionedSprite):
@@ -342,8 +341,10 @@ class Game:
         self.clock = pygame.time.Clock()
 
         # initialize game variables
+        self.counter = TIME_LIMIT
         self.level = 1
         self.start = False
+        self.end = False
         Scene.game = self
         Scene.current = Level(self.level)
         self.camera = Camera(0, 0)
@@ -351,7 +352,6 @@ class Game:
         # define font
         self.font = pygame.font.SysFont("Futura", 30)
 
-        self.counter = TIME_LIMIT
 
     def load_data(self):
         self.start_img = pygame.image.load("img/start_btn.png").convert_alpha()
@@ -393,9 +393,9 @@ class Game:
             # keyboard presses
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_a:
-                    Player.player.x_speed = -10
+                    Player.player.x_speed = -PLAYER_SPEED
                 if event.key == pygame.K_d:
-                    Player.player.x_speed = 10
+                    Player.player.x_speed = PLAYER_SPEED
                 if event.key == pygame.K_w:
                     Player.player.jump()
                 if event.key == pygame.K_ESCAPE:
@@ -408,16 +408,39 @@ class Game:
                 if event.key == pygame.K_d:
                     Player.player.x_speed = 0
 
-            if event.type == pygame.USEREVENT:
+            if event.type == pygame.USEREVENT and not self.end:
                 self.counter -= 1
                 if self.counter == 0:
                     Player.player.health = 0
 
-    def draw_menu(self):
+    def save_score(self):
+        self.user_name = input("Enter your name: ")
+        self.score = self.counter + Player.player.health
+        try:
+            with open("score.pkl", "rb") as f:
+                self.highscore = pkl.load(f)
+            self.highscore.append((self.user_name, self.score))
+            self.highscore.sort(key=lambda x: x[1], reverse=True)
+        except EOFError:
+            self.highscore = [(self.user_name, self.score)]
+        with open("score.pkl", "wb") as f:
+            pkl.dump(self.highscore, f)
+        print("Highscore:")
+        for i, (name, score) in enumerate(self.highscore):
+            print(f"{i + 1}. {name}: {score}")
+        
+    
+    def draw_intro(self):
         self.screen.fill(BG)
         # add buttons
         if self.start_button.draw(self.screen):
             self.start = True
+        if self.exit_button.draw(self.screen):
+            self.run = False
+
+    def draw_ending(self):
+        self.screen.fill(BG)
+        self.draw_text(f"score: {self.counter + Player.player.health}", "black", TILE_SIZE, TILE_SIZE * 1.5)
         if self.exit_button.draw(self.screen):
             self.run = False
 
@@ -441,7 +464,10 @@ class Game:
                     for sprite in Scene.current:
                         sprite.kill()
                     Scene.current = Level(self.level)
-
+                elif self.level == MAX_LEVELS + 1:
+                    self.end = True
+                    
+                    
             self.screen.blit(
                 self.camera.get_surface(self.backscreen, rect1, rect2),
                 pygame.Rect((0, 0), self.camera.rect.size),
@@ -462,11 +488,17 @@ class Game:
             self.event()
 
             if not self.start:
-                self.draw_menu()
+                self.draw_intro()
 
+            elif self.end:
+                self.draw_ending()
+                
             else:
                 self.draw()
 
             pygame.display.update()
-
+        
         pygame.quit()
+        
+        if self.end:
+            self.save_score()
