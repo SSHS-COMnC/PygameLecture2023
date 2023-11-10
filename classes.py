@@ -35,6 +35,8 @@ class Level(Scene):
         return data
 
     def load(self):
+        pygame.mixer.music.play(-1)
+        
         self.level_length = len(self.data[0])
         player_position = (0, 0)
         # iterate through each value in level data file
@@ -66,8 +68,10 @@ class Level(Scene):
         return player_position
 
     def reset(self):
+        pygame.mixer.music.unpause()
+        
         self.remove(Player.player)
-        self.add(Player(*self.player_position))
+        self.add(Player(self.player_position[0], self.player_position[1]))
         for bullet in Bullet.bullets:
             bullet.kill()
 
@@ -100,7 +104,7 @@ class Player(PositionedSprite):
         self.health = 100
         self.in_air = True
         Player.player = self  # class attribute to keep track of the player
-
+        
     def move(self):
         # apply gravity
         self.y_speed += GRAVITY
@@ -157,6 +161,8 @@ class Player(PositionedSprite):
 
     def jump(self):
         if not self.in_air:
+            Scene.game.jump_sfx.play()
+            
             self.y_speed = -15
             self.in_air = True
 
@@ -327,6 +333,7 @@ class Game:
 
     def __init__(self):
         pygame.init()
+        pygame.mixer.init()
 
         # create screen
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
@@ -369,6 +376,9 @@ class Game:
         self.tile_imgs = {}
         for i in range(TILE_TYPES):
             self.tile_imgs[i] = pygame.image.load(f"img/tile/{i}.png").convert_alpha()
+            
+        self.jump_sfx = pygame.mixer.Sound("sfx_data/jump.wav")
+        pygame.mixer.music.load( "sfx_data/bgm.wav" )
 
     def create_btns(self):
         self.start_button = Button(
@@ -408,7 +418,7 @@ class Game:
                 if event.key == pygame.K_d:
                     Player.player.x_speed = 0
 
-            if event.type == pygame.USEREVENT and not self.end:
+            if event.type == pygame.USEREVENT and not self.end and self.start:
                 self.counter -= 1
                 if self.counter == 0:
                     Player.player.health = 0
@@ -477,6 +487,7 @@ class Game:
             )
             self.draw_text(f"time: {self.counter}", "black", TILE_SIZE, TILE_SIZE * 1.5)
         else:
+            pygame.mixer.music.pause()
             if self.restart_button.draw(self.screen):
                 Scene.current.reset()
 
