@@ -20,7 +20,7 @@ BULLET_SPEED = 2
 ENEMY_RANGE = 200
 ENEMY_COOLDOWN = 100
 
-TIME_LIMIT = 300
+TIME_LIMIT = 5
 
 # define colours
 BG = (144, 201, 120)  # background color
