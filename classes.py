@@ -418,10 +418,10 @@ class Game:
                 if event.key == pygame.K_d:
                     Player.player.x_speed = 0
 
-            if event.type == pygame.USEREVENT and not self.end and self.start:
+            if event.type == pygame.USEREVENT and not self.end and self.start and Player.player.alive():
                 self.counter -= 1
                 if self.counter == 0:
-                    Player.player.health = 0
+                    self.end = True
 
     def save_score(self):
         self.user_name = input("Enter your name: ")
@@ -450,9 +450,14 @@ class Game:
 
     def draw_ending(self):
         self.screen.fill(BG)
-        self.draw_text(f"score: {self.counter + Player.player.health}", "black", TILE_SIZE, TILE_SIZE * 1.5)
-        if self.exit_button.draw(self.screen):
-            self.run = False
+        if self.counter <= 0:
+            self.draw_text(f"GAME OVER", "black", TILE_SIZE, TILE_SIZE * 1.5)
+            if self.exit_button.draw(self.screen):
+                self.run = False
+        else:
+            self.draw_text(f"score: {self.counter + Player.player.health}", "black", TILE_SIZE, TILE_SIZE * 1.5)
+            if self.exit_button.draw(self.screen):
+                self.run = False
 
     def draw(self):
         self.camera.move()
